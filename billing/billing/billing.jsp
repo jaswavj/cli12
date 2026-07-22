@@ -25,10 +25,24 @@
                             <div class="card-body">
                                 
                                 <div class="row g-1 mb-1">
-                                    <div class="col-2 input-outline"><input type="text" id="customerName"
-                                            class="form-control" placeholder="" autocomplete="off"><label> Customer Name </label>
-                                            <input type="hidden" id="customerId" value="0">
-                                            <input type="hidden" id="customerCreditLimit" value="0">
+                                    <div class="col-3 col-md-3">
+                                        <div class="input-outline"><input type="text" id="customerName"
+                                                class="form-control" placeholder="" autocomplete="off"><label> Customer Name </label>
+                                                <input type="hidden" id="customerId" value="0">
+                                                <input type="hidden" id="customerCreditLimit" value="0">
+                                        </div>
+                                        <div id="exchangePointPanel" class="mt-1 px-1" style="display:none;">
+                                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1 small">
+                                                <span class="fw-semibold text-success text-nowrap">
+                                                    Exchange Points: ₹<span id="exchangePointBalance">0.00</span>
+                                                </span>
+                                                <span id="exchangePointApplied" class="text-muted text-nowrap" style="display:none;"></span>
+                                            </div>
+                                            <div class="form-check mb-0">
+                                                <input class="form-check-input" type="checkbox" id="useExchangePoints">
+                                                <label class="form-check-label small" for="useExchangePoints">Use on this bill</label>
+                                            </div>
+                                        </div>
                                     </div>
                                     <div class="col-2 input-outline"><input type="text" id="customerPhn" placeholder=""
                                             class="form-control"><label> Customer ph no </label>
@@ -162,8 +176,7 @@
                                     <div class="col-6 col-md-4 col-lg">
                                         <div class="input-outline">
                                             <input type="text" class="form-control only-numbers red-text"
-                                                id="finalDiscount" value="0"
-                                                oninput="setDefaultValue(this); updatePayableAmount();">
+                                                id="finalDiscount" value="0">
                                             <label>ExtraDisc</label>
                                         </div>
                                     </div>

@@ -6,6 +6,9 @@ let prodTotal = 0;
 let currentProductStock = 0; // Store current product's available stock
 let productQuantitiesInBill = {}; // Track quantities already added to bill by product ID
 let currentQuotationId = null; // Store current quotation ID when converting to bill
+let customerExchangePoints = 0;
+let useExchangePoints = false;
+let manualExtraDiscount = 0;
 
 // Customer Autocomplete Setup
 let customerAutocompleteTimeout;
@@ -23,6 +26,7 @@ customerNameInput.addEventListener("input", function() {
     
     if (query.length < 2) {
         customerIdInput.value = "0";
+        resetExchangePoints();
         enableSaveButton(); // Re-enable when customer is cleared
         return;
     }
@@ -80,11 +84,97 @@ function selectCustomer(customer) {
     
     removeCustomerAutocomplete();
     
+    fetchCustomerExchangePoints(customer.id);
+    
     // Check for overdue dues first
     checkOverdueDues(customer.id);
     
     // Then check credit eligibility
     checkCreditEligibility(customer.id);
+}
+
+function fetchCustomerExchangePoints(customerId) {
+    if (!customerId || customerId === "0") {
+        resetExchangePoints();
+        return;
+    }
+
+    $.ajax({
+        url: contextPath + '/billing/getCustomerExchangePoint.jsp',
+        type: 'GET',
+        data: { customerId: customerId },
+        dataType: 'json',
+        success: function(response) {
+            customerExchangePoints = parseFloat(response.exchangePoint) || 0;
+            updateExchangePointUI();
+            updatePayableAmount();
+        },
+        error: function() {
+            resetExchangePoints();
+        }
+    });
+}
+
+function resetExchangePoints() {
+    customerExchangePoints = 0;
+    useExchangePoints = false;
+
+    const panel = document.getElementById('exchangePointPanel');
+    const checkbox = document.getElementById('useExchangePoints');
+    const appliedEl = document.getElementById('exchangePointApplied');
+
+    if (checkbox) checkbox.checked = false;
+    if (panel) panel.style.display = 'none';
+    if (appliedEl) appliedEl.style.display = 'none';
+    updatePayableAmount();
+}
+
+function updateExchangePointUI() {
+    const panel = document.getElementById('exchangePointPanel');
+    const balanceEl = document.getElementById('exchangePointBalance');
+    const checkbox = document.getElementById('useExchangePoints');
+
+    if (!panel || !balanceEl) return;
+
+    if (customerExchangePoints > 0) {
+        panel.style.display = 'block';
+        balanceEl.textContent = customerExchangePoints.toFixed(2);
+    } else {
+        panel.style.display = 'none';
+        useExchangePoints = false;
+        if (checkbox) checkbox.checked = false;
+    }
+}
+
+function getExchangePointsUsed() {
+    if (!useExchangePoints || customerExchangePoints <= 0) return 0;
+
+    const billBeforePoints = grandTotal - manualExtraDiscount;
+    if (billBeforePoints <= 0) return 0;
+
+    return Math.min(customerExchangePoints, billBeforePoints);
+}
+
+const finalDiscountInput = document.getElementById("finalDiscount");
+if (finalDiscountInput) {
+    finalDiscountInput.addEventListener('input', function() {
+        setDefaultValue(this);
+        const newTotal = parseFloat(this.value) || 0;
+        if (useExchangePoints && customerExchangePoints > 0) {
+            manualExtraDiscount = Math.max(0, newTotal - getExchangePointsUsed());
+        } else {
+            manualExtraDiscount = newTotal;
+        }
+        updatePayableAmount();
+    });
+}
+
+const useExchangePointsCheckbox = document.getElementById('useExchangePoints');
+if (useExchangePointsCheckbox) {
+    useExchangePointsCheckbox.addEventListener('change', function() {
+        useExchangePoints = this.checked;
+        updatePayableAmount();
+    });
 }
 
 
@@ -410,10 +500,25 @@ function updateTotals() {
 
 
 function updatePayableAmount() {
-    const discount = parseFloat(document.getElementById("finalDiscount").value) || 0;
-    const payable = grandTotal - discount;
+    const pointsUsed = getExchangePointsUsed();
+    const totalExtraDisc = manualExtraDiscount + pointsUsed;
+    document.getElementById("finalDiscount").value = totalExtraDisc.toFixed(3);
+    const payable = grandTotal - totalExtraDisc;
     document.getElementById("payableAmount").value = payable.toFixed(3);
-    //document.getElementById("paid").value = payable.toFixed(2);
+
+    const appliedEl = document.getElementById('exchangePointApplied');
+    if (appliedEl) {
+        if (pointsUsed > 0) {
+            appliedEl.textContent = 'Applying ₹' + pointsUsed.toFixed(2) + ' (Remaining: ₹' + (customerExchangePoints - pointsUsed).toFixed(2) + ')';
+            appliedEl.style.display = 'inline';
+        } else if (useExchangePoints && customerExchangePoints > 0) {
+            appliedEl.textContent = 'Add items to apply';
+            appliedEl.style.display = 'inline';
+        } else {
+            appliedEl.style.display = 'none';
+        }
+    }
+
     updatePaymentFields(payable);
 }
 
@@ -516,7 +621,8 @@ function saveBill() {
     if (customerPhn === "") customerPhn = "-";
 
     // Get totals
-    const finalDiscount = parseFloat(document.getElementById("finalDiscount").value) || 0;    
+    const finalDiscount = parseFloat(document.getElementById("finalDiscount").value) || 0;
+    const exchangePointsUsed = getExchangePointsUsed();
     const payableAmount = parseFloat(document.getElementById("payableAmount").value) || 0;
     const grandTotal = parseFloat(document.getElementById("grandTotal").value) || 0;
     const priceTotal = parseFloat(document.getElementById("priceTotal").value) || 0;
@@ -597,6 +703,7 @@ function saveBill() {
             bankPaid,
             totalPaid,
             balance,
+            exchangePointsUsed,
             quotationId: currentQuotationId || 0,
             products: JSON.stringify(products)
         },

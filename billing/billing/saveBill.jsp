@@ -82,11 +82,43 @@ try {
     if (finalDiscountStr != null && !finalDiscountStr.trim().isEmpty()) {
         finalDiscount = Double.parseDouble(finalDiscountStr);
     }
-    if (payableAmountStr != null && !payableAmountStr.trim().isEmpty()) {
-        payableAmount = Double.parseDouble(payableAmountStr);
-    }
     if (grandTotalStr != null && !grandTotalStr.trim().isEmpty()) {
         grandTotal = Double.parseDouble(grandTotalStr);
+    }
+    
+    double exchangePointsUsed = 0.0;
+    String exchangePointsUsedStr = request.getParameter("exchangePointsUsed");
+    if (exchangePointsUsedStr != null && !exchangePointsUsedStr.trim().isEmpty()) {
+        exchangePointsUsed = Double.parseDouble(exchangePointsUsedStr);
+    }
+    
+    if (exchangePointsUsed > 0) {
+        if (customerId <= 0) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("ERROR: Exchange points require a registered customer.");
+            return;
+        }
+
+        double availablePoints = bill.getCustomerExchangePoint(customerId);
+        double manualExtraDiscount = finalDiscount - exchangePointsUsed;
+        if (manualExtraDiscount < 0) manualExtraDiscount = 0;
+        double maxUsable = grandTotal - manualExtraDiscount;
+        if (maxUsable < 0) maxUsable = 0;
+
+        if (exchangePointsUsed > availablePoints + 0.001) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("ERROR: Customer does not have enough exchange points.");
+            return;
+        }
+        if (exchangePointsUsed > maxUsable + 0.001) {
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            out.print("ERROR: Exchange points cannot exceed bill payable amount.");
+            return;
+        }
+    }
+
+    if (payableAmountStr != null && !payableAmountStr.trim().isEmpty()) {
+        payableAmount = Double.parseDouble(payableAmountStr);
     }
     if (priceTotalStr != null && !priceTotalStr.trim().isEmpty()) {
         priceTotal = Double.parseDouble(priceTotalStr);
@@ -153,6 +185,10 @@ try {
 
     String billDisplay = bill.saveBillItems(productList, customerName, finalDiscount, payableAmount, grandTotal, uid, priceTotal, discountTotal,customerPhn,totalPaid,cashPaid,bankPaid,mode,type,balance,customerId,priceCategory,attenderId);
     int billId = bill.getBillId(billDisplay);
+    
+    if (exchangePointsUsed > 0 && customerId > 0) {
+        bill.useExchangePoint(customerId, billId, exchangePointsUsed, uid);
+    }
     
     // Auto-allocate cheques for credit bills
     if (balance > 0 && customerId > 0) {
