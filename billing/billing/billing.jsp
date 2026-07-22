@@ -282,6 +282,13 @@
                                                 </button>
                                             </div>
 
+                                            <div class="col-12 col-md-6 col-lg">
+                                                <button type="button" class="btn btn-outline-violet btn-sm w-100"
+                                                    onclick="window.location.href='<%=contextPaths%>/admin/Exchange/page.jsp'">
+                                                    <i class="fa-solid fa-right-left"></i> EXCHANGE
+                                                </button>
+                                            </div>
+
                                             <div class="col-12 col-md-6 col-lg-auto ms-lg-auto">
                                                 <div class="d-flex align-items-center justify-content-center p-2 border rounded bg-light h-100">
                                                     <div id="billNoSpan" class="fs-6 fw-bold text-danger"></div>
