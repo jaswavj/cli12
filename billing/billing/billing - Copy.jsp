@@ -175,7 +175,7 @@
                                     </div>
                                     <div class="col-6 col-md-4 col-lg">
                                         <div class="input-outline">
-                                            <input type="text" class="form-control only-decimal red-text"
+                                            <input type="text" class="form-control only-numbers red-text"
                                                 id="finalDiscount" value="0">
                                             <label>ExtraDisc</label>
                                         </div>
@@ -444,24 +444,6 @@
                                 </script>
                                 <script src="bluetoothPrinter.js"></script>
                                 <script src="billing.js"></script>
-                                <script>
-                                // ExtraDisc fix: keep billing.js unchanged for client deploy; patch here only
-                                (function () {
-                                    var extraDiscEl = document.getElementById("finalDiscount");
-                                    if (!extraDiscEl || typeof updatePayableAmount !== "function") return;
-
-                                    var _updatePayableAmount = updatePayableAmount;
-                                    updatePayableAmount = function () {
-                                        var keepValue = document.activeElement === extraDiscEl ? extraDiscEl.value : null;
-                                        _updatePayableAmount();
-                                        if (keepValue !== null) extraDiscEl.value = keepValue;
-                                    };
-
-                                    extraDiscEl.addEventListener("blur", function () {
-                                        this.value = (parseFloat(this.value) || 0).toFixed(3);
-                                    });
-                                })();
-                                </script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Focus productCode on fresh page load
